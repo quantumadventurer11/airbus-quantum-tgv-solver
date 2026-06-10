@@ -78,7 +78,7 @@ def _qlbm_grid_for_re(Re: float, ci_mode: bool) -> int:
     if Re <= 10:
         return 8
     if Re <= 100:
-        return 8
+        return 16  # Re=100: finer grid (12 qubits) for better accuracy
     return 16  # Re=500: finer grid (12 qubits) for better accuracy
 
 
