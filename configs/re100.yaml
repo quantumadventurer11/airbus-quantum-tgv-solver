@@ -1,0 +1,20 @@
+# @package _global_
+# Re=100 case: moderate Reynolds, requires finer grid to resolve vortex.
+# nu = V0 * L / Re = 1.0 * 2π / 100 ≈ 0.06283
+
+defaults:
+  - base
+
+physics:
+  Re: 100
+  nu: 0.06283185307179586   # = V0 * L / Re
+
+solver:
+  dt: 0.001
+  t_end: 1.0
+
+classical:
+  N: 128   # 128×128 needed to resolve finer scales at Re=100
+
+quantum:
+  N: 16    # 16×16 quantum grid → 12 qubits (still tractable on statevector)

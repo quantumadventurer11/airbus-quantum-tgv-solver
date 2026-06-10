@@ -1,0 +1,18 @@
+# @package _global_
+# Full scaling sweep configuration for the three required benchmark plots.
+
+defaults:
+  - base
+
+benchmark:
+  re_list: [10, 50, 100, 200, 400]
+  # Grid sizes scale with Re: N ≥ C * Re^(3/4) for adequate resolution (2D NS)
+  # We use N = max(16, round(4 * Re^0.75)) clamped to powers of 2.
+  # Classical grids are computed automatically by sweep.py.
+  # Quantum grids are capped at N=16 (12 qubits) for statevector tractability.
+  quantum_max_N: 16
+  n_timing_runs: 3
+
+solver:
+  dt: 0.001
+  t_end: 0.5   # Shorter time for sweep to keep runtime manageable

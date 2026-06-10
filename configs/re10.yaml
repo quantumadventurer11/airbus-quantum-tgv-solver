@@ -1,0 +1,20 @@
+# @package _global_
+# Re=10 case: low Reynolds, gentle viscosity, well-resolved by small grids.
+# nu = V0 * L / Re = 1.0 * 2π / 10 ≈ 0.6283
+
+defaults:
+  - base
+
+physics:
+  Re: 10
+  nu: 0.6283185307179586   # = V0 * L / Re
+
+solver:
+  dt: 0.005
+  t_end: 1.0
+
+classical:
+  N: 64    # Grid resolution: 64×64 is more than adequate for Re=10
+
+quantum:
+  N: 8     # 8×8 quantum grid → 10 qubits (tractable on statevector sim)

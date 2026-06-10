@@ -1,0 +1,36 @@
+# Base configuration for all TGV runs.
+# All physical constants come directly from the challenge statement (PDF §6).
+# Do not introduce magic numbers in code — reference this file instead.
+
+physics:
+  L: 6.283185307179586   # Domain length = 2π  [m]
+  V0: 1.0                # Vortex velocity intensity [m/s]
+  Uc: 1.0                # Convection velocity x-component [m/s]
+  Vc: 0.0                # Convection velocity y-component [m/s]
+  rho: 1.0               # Fluid density [kg/m³]
+  p0: 0.0                # Background reference pressure [Pa]
+  # Viscosity is derived: nu = V0 * L / Re  (set per run config)
+
+solver:
+  dt: 0.001              # Time step [s] — override per Re for stability
+  t_end: 1.0             # Simulation end time [s]
+
+classical:
+  dealias: true          # Apply 2/3 dealiasing rule in spectral solver
+
+quantum:
+  backend: "aer_statevector"   # Options: aer_statevector | aer_qasm | ibm_runtime | fake_<name>
+  shots: 8192                   # Number of measurement shots (ignored for statevector)
+  vqc_layers: 4                 # Number of VQC ansatz layers for collision operator
+  vqc_maxiter: 200              # Maximum SPSA iterations for VQC training
+  seed: 42                      # Random seed for reproducibility
+
+benchmark:
+  re_list: [10, 100]
+  grid_sizes: [8, 16, 32]       # N for NxN grid
+  n_timing_runs: 3              # Repeat each timing measurement this many times
+
+output:
+  results_dir: "results/data"
+  figures_dir: "results/figures"
+  dpi: 150
