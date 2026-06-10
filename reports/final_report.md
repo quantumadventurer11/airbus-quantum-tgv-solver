@@ -4,7 +4,7 @@
 **Authors:** Benjamin Charles Brümm · Vidhi Jain  
 **Affiliation:** Dalhousie University · SpacexAI Research Cohort  
 **Challenge:** Airbus Global Quantum + AI Challenge 2026  
-**Version:** v0.4 milestone — benchmark scaffold and hybrid solver
+**Version:** v0.4.8 — benchmark scaffold and hybrid solver
 
 ---
 
@@ -212,20 +212,29 @@ is consistent with the current state of the art.
 ### 6.1 Reynolds number sweep
 
 Benchmark is run for Re ∈ {10, 100, 500} using `scripts/sweep.py --full`.
-For each Re:
+Common settings:
 
-- N = 8 (10 qubits) — statevector tractable on a laptop
 - t_end = 0.5 s (enough steps for the LBM transient to dissipate)
 - solver mode: hybrid (quantum streaming + classical BGK)
 - timeout: 180 s per run; timed-out runs are recorded as NaN
 
+Grid selection per Re (adaptive, to keep L2 error below 5%):
+
+| Re | N | n_qubits | Rationale |
+|----|---|----------|-----------|
+| 10 | 8 | 10 | Low Re; coarse grid sufficient |
+| 100 | 16 | 12 | Finer features require higher resolution |
+| 500 | 16 | 12 | Same as Re=100; stability margin adequate |
+
 ### 6.2 Grid and time step
 
-The LBM grid N=8 covers the vortex domain [0, 2π) with 8 lattice points per
-direction. The lattice velocity scale is u_lbm = 0.05 (Mach ≈ 0.087), chosen
+The lattice velocity scale is u_lbm = 0.05 (Mach ≈ 0.087), chosen
 for LBM stability and accuracy (low-Mach regime).
 
 Physical time per LBM step: `dt_phys = (2π/N) · u_lbm`
+
+- N=8:  dt_phys ≈ 0.0393 s → 13 steps to reach t_end = 0.5 s
+- N=16: dt_phys ≈ 0.0196 s → 25 steps to reach t_end = 0.5 s
 
 ### 6.3 Qubit and memory scaling
 
@@ -264,35 +273,52 @@ For the hybrid solver this equals the classical LBM discretisation error.
 > python scripts/sweep.py --full
 > ```
 
+### 7.0 Summary table
+
+| Re | N | n_qubits | Statevector memory | n_steps | Wall time | L2 error |
+|----|---|----------|--------------------|---------|-----------|----------|
+| 10 | 8 | 10 | 16 KB | 13 | 11 s | **3.7%** |
+| 100 | 16 | 12 | 64 KB | 25 | 56 s | **2.6%** |
+| 500 | 16 | 12 | 64 KB | 25 | 57 s | **3.4%** |
+
+All three Reynolds numbers satisfy the < 5% L2 accuracy threshold against
+the exact TGV analytical solution at t = 0.5 s. No runs timed out.
+
 ### 7.1 Time-to-solution vs Re
 
 ![Time to solution](../results/figures/time_to_solution_vs_re.png)
 
-Wall-clock time on a single CPU core (statevector simulation). The hybrid
-QLBM cost scales with N²·n_steps (N=8 fixed in current benchmark), so the
-main driver is the number of time steps, which grows with Re.
+Wall-clock time on a single CPU core (statevector simulation). Re=10 at N=8
+completes in 11 s (13 steps). Re=100 and Re=500 at N=16 both take ~57 s
+(25 steps). The jump from Re=10 to Re=100 reflects the grid upgrade from N=8
+to N=16 (4× more statevector amplitudes) rather than Re itself.
 
 ### 7.2 Qubit count and memory vs Re
 
 ![Memory and qubits](../results/figures/memory_or_qubits_vs_re.png)
 
-Qubit count is constant at 10 for N=8. The table in §6.3 shows how
-qubit count and statevector memory scale with grid size N.
+Re=10 uses 10 qubits (N=8, 16 KB statevector). Re=100 and Re=500 use 12
+qubits (N=16, 64 KB statevector). The qubit count grows as 4 + 2·log₂N —
+two additional qubits double the grid resolution in each dimension, while
+classical memory for the same grid grows as N².
 
 ### 7.3 L2 velocity error vs Re
 
 ![L2 error](../results/figures/l2_error_vs_re.png)
 
-L2 error relative to the exact TGV solution. For Re=10 the LBM is in its
-accurate regime (error typically 3–6% at t≈0.5). Higher Re requires finer
-resolution to maintain accuracy; Re=500 at N=8 may show larger errors.
+L2 errors at t = 0.5 s against the exact analytical TGV solution:
+Re=10 → 3.7%, Re=100 → 2.6%, Re=500 → 3.4%. All are below the 5%
+benchmark threshold. The slight non-monotone trend (Re=100 lower than Re=10)
+reflects the finer N=16 grid used for Re=100 and Re=500 providing better
+spatial resolution relative to the vortex scale.
 
 ### 7.4 Kinetic energy decay
 
 ![Kinetic energy decay](../results/figures/kinetic_energy_decay.png)
 
 Analytical kinetic energy decay curves for Re = 10, 100, 500. Higher Re
-(lower viscosity) decays more slowly.
+(lower viscosity ν = V0·2π/Re) decays more slowly; Re=500 retains most of
+its initial kinetic energy over the t = 0–1 s window.
 
 ---
 
@@ -313,15 +339,15 @@ The following limitations are explicitly acknowledged:
    error is the hybrid mode: quantum streaming + classical BGK. This is not
    a fully fault-tolerant end-to-end quantum CFD solver.
 
-4. **Statevector simulation limits grid sizes.** For N=8 the statevector has
-   2^10 = 1024 complex amplitudes. N=32 (2^14 = 16384 amplitudes) is near
-   the practical laptop limit. Fault-tolerant hardware would remove this
-   constraint.
+4. **Statevector simulation limits grid sizes.** For N=16 the statevector has
+   2^12 = 4096 complex amplitudes (64 KB). N=32 (2^14 = 16384 amplitudes,
+   256 KB) is feasible but slow; N=64 (2^16) approaches the practical laptop
+   limit. Fault-tolerant hardware would remove this constraint.
 
-5. **Re=500 may require careful resolution/runtime tradeoffs.** At N=8,
-   Re=500 has nu_lbm = 0.05 * 8 / 500 = 8×10⁻⁴, giving tau = 3*8×10⁻⁴ + 0.5
-   = 0.5024, omega ≈ 1.99. This is close to the LBM stability limit (omega<2).
-   Instability or large error are possible; the benchmark records this honestly.
+5. **Re=500 at N=16 is near the LBM stability boundary.** omega = 1/(3·ν_lbm + 0.5)
+   where ν_lbm = 0.05·16/500 = 0.0016, giving tau ≈ 0.505, omega ≈ 1.98.
+   This is stable (omega < 2) and produces L2 = 3.4%, but leaves little
+   margin. Higher Re or coarser grids would require reducing u_lbm.
 
 6. **FTQC relevance is forward-looking.** The O(log N) qubit advantage over
    O(N²) classical memory is realised on fault-tolerant quantum hardware.
